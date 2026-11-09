@@ -123,7 +123,7 @@
   <input type="file" id="musicFile" accept="audio/*" hidden>
   <div id="musicName" class="sec"></div>
 </div>
-<audio id="bgm" src="music.mp3" loop preload="auto"></audio>
+<audio id="bgm" loop preload="auto"></audio>
 <button id="open">🎆 控制台</button>
 <div id="hint">点击屏幕放烟花 · 第一次点击会开启音效和音乐</div>
 
@@ -694,6 +694,29 @@ musicFile.onchange = () => {
   musicName.textContent = '♪ ' + f.name.replace(/\.[^.]+$/, '');
   bgm.play().catch(() => {});
 };
+// 线上版：歌曲是加密的 music.enc，只有带 #key=... 的专属链接能解密播放
+async function loadEncryptedMusic(pass) {
+  try {
+    musicName.textContent = '正在加载背景音乐…';
+    const buf = new Uint8Array(await (await fetch('music.enc')).arrayBuffer());
+    const salt = buf.slice(8, 16), data = buf.slice(16); // openssl 格式："Salted__" + 8 字节盐 + 密文
+    const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveBits']);
+    const bits = new Uint8Array(await crypto.subtle.deriveBits(
+      { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' }, base, 384));
+    const key = await crypto.subtle.importKey('raw', bits.slice(0, 32), 'AES-CBC', false, ['decrypt']);
+    const plain = await crypto.subtle.decrypt({ name: 'AES-CBC', iv: bits.slice(32, 48) }, key, data);
+    bgm.src = URL.createObjectURL(new Blob([plain], { type: 'audio/mpeg' }));
+    musicOK = true;
+    musicName.textContent = "♪ Nothing's Gonna Change My Love for You";
+    if (ac) playMusic();
+  } catch (e) {
+    musicOK = false;
+    musicName.textContent = '背景音乐加载失败';
+  }
+}
+const musicKey = new URLSearchParams(location.hash.slice(1)).get('key');
+if (musicKey && window.crypto && crypto.subtle) loadEncryptedMusic(musicKey);
+else bgm.src = 'music.mp3';
 
 // ================= 祝福语 =================
 const blessEl = document.getElementById('bless');
