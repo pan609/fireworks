@@ -1,0 +1,746 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>跨年烟花秀</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #02030a; overflow: hidden; touch-action: none;
+    font-family: "PingFang SC", "Microsoft YaHei", sans-serif; -webkit-user-select: none; user-select: none; }
+  canvas { display: block; position: fixed; left: 0; top: 0; }
+  #fg { mix-blend-mode: screen; pointer-events: none; }
+  #flash { position: fixed; inset: 0; pointer-events: none; opacity: 0; mix-blend-mode: screen; }
+
+  /* 祝福语：金色立体字 */
+  #bless {
+    position: fixed; left: 0; right: 0; top: 34%; text-align: center; pointer-events: none;
+    font-weight: 900; font-size: clamp(44px, 11vw, 120px); letter-spacing: .1em;
+    background: linear-gradient(180deg, #fffbe0 0%, #ffe07a 35%, #ffb02e 55%, #ff7a1a 70%, #ffe9a6 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 2px 0 #8a3a00) drop-shadow(0 4px 0 #5c2400) drop-shadow(0 0 24px rgba(255,150,30,.55));
+    opacity: 0; transform: perspective(600px) rotateX(18deg) scale(.6);
+  }
+  #bless.show { animation: bless 5.2s ease-out forwards; }
+  @keyframes bless {
+    0%   { opacity: 0; transform: perspective(600px) rotateX(40deg) scale(.4); filter: blur(8px) drop-shadow(0 0 0 #000); }
+    14%  { opacity: 1; transform: perspective(600px) rotateX(14deg) scale(1.05);
+           filter: blur(0) drop-shadow(0 2px 0 #8a3a00) drop-shadow(0 4px 0 #5c2400) drop-shadow(0 0 24px rgba(255,150,30,.55)); }
+    22%  { transform: perspective(600px) rotateX(14deg) scale(1); }
+    78%  { opacity: 1; transform: perspective(600px) rotateX(14deg) scale(1.04); }
+    100% { opacity: 0; transform: perspective(600px) rotateX(14deg) scale(1.15) translateY(-20px); }
+  }
+
+  #count {
+    position: fixed; top: 14px; left: 0; right: 0; text-align: center; pointer-events: none;
+    color: #ffe6a8; font-size: clamp(13px, 2.6vw, 18px); text-shadow: 0 0 8px rgba(255,170,60,.7), 0 1px 3px #000;
+  }
+  #big {
+    position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+    pointer-events: none; color: #fff; font-weight: 900; font-size: 30vmin;
+    text-shadow: 0 0 30px #ff9a2e, 0 0 80px #ff4d2e; opacity: 0; transition: opacity .3s;
+  }
+  #place {
+    position: fixed; left: 50%; bottom: 40px; transform: translateX(-50%); pointer-events: none;
+    padding: 5px 14px; border-radius: 99px; background: rgba(0,0,0,.4);
+    color: #fff3d6; font-size: clamp(12px, 2.4vw, 15px); letter-spacing: .15em;
+    opacity: 0; transition: opacity 1.2s; white-space: nowrap;
+  }
+  #credit {
+    position: fixed; right: 8px; bottom: 6px; font-size: 10px; color: rgba(255,255,255,.4);
+    text-shadow: 0 1px 2px #000; max-width: 60vw; text-align: right;
+  }
+  #credit a { color: inherit; }
+
+  /* 控制面板 */
+  #panel {
+    position: fixed; top: 12px; left: 12px; width: 220px; padding: 12px;
+    max-height: calc(100vh - 48px); overflow-y: auto;
+    background: rgba(12, 14, 28, .72); border: 1px solid rgba(255,255,255,.1);
+    border-radius: 12px; color: #dfe3f0; font-size: 13px;
+    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+    transition: opacity .25s, transform .25s;
+  }
+  #panel.hide { opacity: 0; transform: translateX(-20px); pointer-events: none; }
+  #panel .head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  #panel .head b { color: #ffd77a; font-size: 14px; }
+  #panel .sec { margin: 10px 0 6px; color: #8d93a8; font-size: 12px; }
+  #types { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+  #panel button, #panel select {
+    font: inherit; color: #e8ebf5; background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.12); border-radius: 7px; padding: 5px 0; cursor: pointer;
+  }
+  #types button.on { background: linear-gradient(180deg, #ffcf5a, #ff8a1f); color: #2a1200; border-color: transparent; font-weight: 700; }
+  #panel select { width: 100%; padding: 6px; }
+  #panel select option { color: #000; }
+  #pickMusic { width: 100%; margin-top: 8px; }
+  #musicName { margin: 6px 0 0; word-break: break-all; }
+  #salvo { width: 100%; margin-top: 6px; background: rgba(255,120,40,.25) !important; }
+  #panel label { display: flex; align-items: center; gap: 6px; margin-top: 6px; cursor: pointer; }
+  #close { width: 26px; padding: 2px 0 !important; }
+  #open {
+    position: fixed; top: 12px; left: 12px; display: none;
+    font: inherit; font-size: 13px; color: #ffd77a; padding: 6px 10px; cursor: pointer;
+    background: rgba(12,14,28,.6); border: 1px solid rgba(255,255,255,.12); border-radius: 8px;
+  }
+  #hint { position: fixed; bottom: 14px; width: 100%; text-align: center;
+    color: rgba(255,255,255,.45); font-size: 12px; pointer-events: none; transition: opacity 1s; text-shadow: 0 1px 2px #000; }
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<canvas id="c"></canvas>
+<canvas id="fg"></canvas>
+<div id="flash"></div>
+<div id="count"></div>
+<div id="bless"></div>
+<div id="big"></div>
+<div id="place"></div>
+<div id="credit"></div>
+
+<div id="panel">
+  <div class="head"><b>🎆 烟花控制台</b><button id="close" title="收起">×</button></div>
+  <div class="sec">烟花类型（点屏幕就放这种）</div>
+  <div id="types"></div>
+  <div class="sec">背景地标</div>
+  <select id="scene"></select>
+  <div class="sec">表演模式</div>
+  <select id="mode">
+    <option value="auto">自动表演</option>
+    <option value="grand">盛大烟花秀</option>
+    <option value="manual">只放我点的</option>
+  </select>
+  <button id="salvo">来一轮齐射 🎇</button>
+  <label><input type="checkbox" id="optText" checked> 显示祝福语</label>
+  <label><input type="checkbox" id="optSound" checked> 烟花音效</label>
+  <label><input type="checkbox" id="optCount" checked> 跨年倒计时</label>
+  <label><input type="checkbox" id="optMusic" checked> 背景音乐</label>
+  <button id="pickMusic">选择音乐文件…</button>
+  <input type="file" id="musicFile" accept="audio/*" hidden>
+  <div id="musicName" class="sec"></div>
+</div>
+<audio id="bgm" src="music.mp3" loop preload="auto"></audio>
+<button id="open">🎆 控制台</button>
+<div id="hint">点击屏幕放烟花 · 第一次点击会开启音效和音乐</div>
+
+<script>
+// ================= 基础 =================
+// 三层画布：bg 实拍照片，c 烟花，fg 水面上的烟花倒影
+const bgC = document.getElementById('bg'), cvs = document.getElementById('c'), fgC = document.getElementById('fg');
+const bgx = bgC.getContext('2d'), ctx = cvs.getContext('2d'), fgx = fgC.getContext('2d');
+const flashEl = document.getElementById('flash');
+const isMobile = matchMedia('(pointer: coarse)').matches || innerWidth < 600;
+const DPR = Math.min(devicePixelRatio || 1, isMobile ? 2 : 1.5);
+const MAX = isMobile ? 4000 : 9000;
+let W, H, S;
+const rand = (a, b) => a + Math.random() * (b - a);
+const pick = a => a[Math.floor(Math.random() * a.length)];
+
+const state = { type: 'random', mode: 'auto', text: true, sound: true, count: true, scene: 'auto' };
+
+// 真实烟花常见颜色（金属盐的焰色）
+const COLORS = [
+  { h: 0, s: 100 },   // 锶红
+  { h: 355, s: 95 },
+  { h: 25, s: 100 },  // 橙
+  { h: 42, s: 100 },  // 金
+  { h: 120, s: 90 },  // 钡绿
+  { h: 150, s: 85 },
+  { h: 210, s: 100 }, // 铜蓝
+  { h: 275, s: 85 },  // 紫
+  { h: 320, s: 95 },  // 粉
+  { h: 190, s: 90 },  // 青
+  { h: 50, s: 15 },   // 银白
+];
+const GOLD = { h: 38, s: 90 };
+
+function sizeCanvas(c, g) {
+  c.width = W * DPR; c.height = H * DPR;
+  c.style.width = W + 'px'; c.style.height = H + 'px';
+  g.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+function resize() {
+  W = innerWidth; H = innerHeight;
+  S = Math.max(0.55, Math.min(1.35, Math.min(W, H * 1.2) / 760));
+  sizeCanvas(bgC, bgx); sizeCanvas(cvs, ctx); sizeCanvas(fgC, fgx);
+  for (const k in SCENES) SCENES[k].geo = geometry(SCENES[k]);
+  applyMask(); drawBg();
+}
+
+// ================= 实拍地标背景 =================
+// 照片来自 Wikimedia Commons，按各自的 CC 许可使用，页面右下角署名。
+// 数值都是相对照片尺寸的比例：
+//   fx/fy  屏幕比例和照片不同时，以这个点为中心裁切
+//   floor  烟花最低在这个高度炸开（大致是楼顶）
+//   fade   烟花在这个区间里渐渐被建筑"挡住"
+//   water  水面从这里开始（没有水面则为 null），用来画烟花倒影
+//   dark   把天空压暗的程度
+const SCENES = {
+  fuji: { name: '日本 · 富士山', img: 'img/fuji.jpg', fx: 0.6, fy: 0.45, floor: 0.48, fade: [0.6, 0.7], water: null, dark: 0.25,
+    credit: ['muroi8210', 'CC BY-SA 2.0', 'https://commons.wikimedia.org/wiki/File:Mount_Fuji_at_night.jpg'] },
+  shanghai: { name: '上海 · 陆家嘴', img: 'img/shanghai.jpg', fx: 0.5, fy: 0.6, floor: 0.42, fade: [0.52, 0.68], water: 0.79, dark: 0,
+    credit: ['Daniel Case', 'CC BY-SA 3.0', 'https://commons.wikimedia.org/wiki/File:Lujiazui_skyline_by_night_from_Bund,_fully_illuminated.jpg'] },
+  canton: { name: '广州 · 广州塔', img: 'img/canton.jpg', fx: 0.565, fy: 0.6, floor: 0.62, fade: [0.74, 0.84], water: 0.89, dark: 0.4,
+    credit: ['钉钉', 'CC BY-SA 4.0', 'https://commons.wikimedia.org/wiki/File:Canton_Tower_at_night_1.jpg'] },
+  paris: { name: '巴黎 · 埃菲尔铁塔', img: 'img/paris.jpg', fx: 0.69, fy: 0.6, floor: 0.48, fade: [0.56, 0.64], water: 0.87, dark: 0.55,
+    credit: ['Carlos Delgado', 'CC BY-SA 3.0', 'https://commons.wikimedia.org/wiki/File:Pont_des_Invalides_et_Tour_Eiffel_-_01.jpg'] },
+  sydney: { name: '悉尼 · 歌剧院', img: 'img/sydney.jpg', fx: 0.45, fy: 0.5, floor: 0.26, fade: [0.36, 0.5], water: 0.6, dark: 0,
+    credit: ['JustARandomEditor123', 'CC BY-SA 4.0', 'https://commons.wikimedia.org/wiki/File:Sydney_Opera_House_at_Night,_2025.jpg'] },
+  london: { name: '伦敦 · 大本钟', img: 'img/london.jpg', fx: 0.62, fy: 0.6, floor: 0.44, fade: [0.52, 0.62], water: 0.8, dark: 0.4,
+    credit: ['Juri Kowski', 'CC BY-SA 3.0', 'https://commons.wikimedia.org/wiki/File:Palace_of_Westminster_%5E_Elizabeth_Tower_with_Big_Ben_-_panoramio.jpg'] },
+};
+const sceneOrder = Object.keys(SCENES);
+let cur = SCENES.fuji, prev = null, trans = 1, sceneAt = performance.now();
+for (const k of sceneOrder) {
+  const sc = SCENES[k];
+  sc.key = k;
+  sc.image = new Image();
+  sc.image.onload = () => { sc.geo = geometry(sc); if (sc === cur || sc === prev) { applyMask(); drawBg(); } };
+  sc.image.src = sc.img;
+}
+
+// 照片铺满屏幕（cover），并把照片里的比例换算成屏幕坐标
+function geometry(sc) {
+  const iw = sc.image.naturalWidth || 1920, ih = sc.image.naturalHeight || 1080;
+  const s = Math.max(W / iw, H / ih), dw = iw * s, dh = ih * s;
+  const dx = Math.min(0, Math.max(W - dw, W / 2 - sc.fx * dw));
+  const dy = Math.min(0, Math.max(H - dh, H / 2 - sc.fy * dh));
+  const Y = f => dy + f * dh;
+  return { dx, dy, dw, dh, floor: Y(sc.floor), fadeA: Y(sc.fade[0]), fadeB: Y(sc.fade[1]),
+           water: sc.water == null ? null : Y(sc.water), top: Math.max(H * 0.07, dy + 0.03 * dh) };
+}
+function drawPhoto(sc, alpha) {
+  if (!sc.image.complete || !sc.image.naturalWidth) return;
+  const g = sc.geo;
+  bgx.globalAlpha = alpha;
+  bgx.drawImage(sc.image, g.dx, g.dy, g.dw, g.dh);
+  if (sc.dark > 0) { // 压暗天空，让烟花更亮
+    const gr = bgx.createLinearGradient(0, 0, 0, g.fadeB);
+    gr.addColorStop(0, `rgba(2,3,14,${sc.dark})`);
+    gr.addColorStop(1, `rgba(2,3,14,${sc.dark * 0.25})`);
+    bgx.fillStyle = gr; bgx.fillRect(0, 0, W, g.fadeB);
+  }
+  bgx.globalAlpha = 1;
+}
+function drawBg() {
+  if (!W) return;
+  bgx.fillStyle = '#02030a'; bgx.fillRect(0, 0, W, H);
+  if (prev && trans < 1) { drawPhoto(prev, 1); drawPhoto(cur, trans); }
+  else drawPhoto(cur, 1);
+}
+// 烟花层用渐变遮罩：落到楼顶以下就慢慢被"挡住"
+function applyMask() {
+  const g = cur.geo; if (!g) return;
+  const m = `linear-gradient(to bottom, #000 ${g.fadeA}px, transparent ${g.fadeB}px)`;
+  cvs.style.webkitMaskImage = m; cvs.style.maskImage = m;
+}
+const placeEl = document.getElementById('place'), creditEl = document.getElementById('credit');
+let placeTimer;
+function setCredit() {
+  const [a, l, u] = cur.credit;
+  creditEl.innerHTML = `照片：${a} · <a href="${u}" target="_blank" rel="noopener">${l}</a> · Wikimedia Commons`;
+}
+function switchScene(key) {
+  const sc = SCENES[key];
+  if (sc === cur) return;
+  prev = cur; cur = sc; trans = 0; sceneAt = performance.now();
+  applyMask(); setCredit();
+  placeEl.textContent = '📍 ' + sc.name;
+  placeEl.style.opacity = 1;
+  clearTimeout(placeTimer);
+  placeTimer = setTimeout(() => placeEl.style.opacity = 0, 4000);
+}
+function nextSceneKey() { return sceneOrder[(sceneOrder.indexOf(cur.key) + 1) % sceneOrder.length]; }
+
+// 水面倒影：把烟花层上下翻转、压扁后画进水面，带一点波纹晃动
+function drawFg() {
+  fgx.clearRect(0, 0, W, H);
+  const g = cur.geo; if (!g || g.water == null) return;
+  const wy = g.water, wh = H - wy;
+  if (wh < 10) return;
+  const k = Math.min(4, g.fadeA / wh), step = isMobile ? 4 : 3;
+  for (let y = wy; y < H; y += step) {
+    const d = y - wy, srcY = g.fadeA - (d + step) * k;
+    if (srcY < 0) break;
+    const off = Math.sin(d * 0.12 + frame * 0.06) * (1 + d * 0.04) * S;
+    fgx.globalAlpha = 0.38 * (1 - d / wh * 0.7);
+    fgx.drawImage(cvs, 0, srcY * DPR, W * DPR, step * k * DPR, off, y, W, step);
+  }
+  fgx.globalAlpha = 1;
+}
+
+// ================= 音效（Web Audio 合成，无需外部文件） =================
+let ac = null, master, wet, noiseBuf, lastBoom = 0;
+function initAudio() {
+  playMusic();
+  if (ac) { if (ac.state === 'suspended') ac.resume(); return; }
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return;
+  ac = new AC();
+  const comp = ac.createDynamicsCompressor();
+  master = ac.createGain(); master.gain.value = 0.3;
+  master.connect(comp); comp.connect(ac.destination);
+  // 混响：模拟楼宇、山谷和水面的回声
+  const len = ac.sampleRate * 3, ir = ac.createBuffer(2, len, ac.sampleRate);
+  for (let ch = 0; ch < 2; ch++) {
+    const d = ir.getChannelData(ch);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.5);
+  }
+  const conv = ac.createConvolver(); conv.buffer = ir;
+  wet = ac.createGain(); wet.gain.value = 0.6;
+  wet.connect(conv); conv.connect(master);
+  noiseBuf = ac.createBuffer(1, ac.sampleRate * 3, ac.sampleRate);
+  const d = noiseBuf.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+}
+function out(node, pan, rev) {
+  let n = node;
+  if (ac.createStereoPanner) { const p = ac.createStereoPanner(); p.pan.value = pan; node.connect(p); n = p; }
+  n.connect(master);
+  const send = ac.createGain(); send.gain.value = rev; n.connect(send); send.connect(wet);
+}
+function noise(t, dur, type, f0, f1, vol, pan, attack, rev) {
+  const src = ac.createBufferSource(); src.buffer = noiseBuf;
+  const f = ac.createBiquadFilter(); f.type = type;
+  f.frequency.setValueAtTime(f0, t); f.frequency.exponentialRampToValueAtTime(f1, t + dur);
+  const g = ac.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + attack);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  src.connect(f); f.connect(g); out(g, pan, rev);
+  src.start(t, Math.random() * 1.5); src.stop(t + dur + 0.05);
+}
+function soundBoom(x, size, crackle) {
+  if (!ac || !state.sound || ac.state !== 'running') return;
+  const now = ac.currentTime;
+  if (now - lastBoom < 0.08) return;
+  lastBoom = now;
+  const pan = Math.max(-0.7, Math.min(0.7, (x / W) * 2 - 1));
+  const t = now + rand(0.35, 0.8);       // 烟花在远处，声音比光晚到
+  const vol = 0.32 * size * rand(0.7, 1);
+  noise(t, 0.07, 'bandpass', 1800, 900, vol * 1.1, pan, 0.001, 0.5);    // "啪"：很短的爆裂
+  noise(t, rand(0.9, 1.4), 'lowpass', 450, 55, vol * 0.85, pan, 0.004, 0.9); // "轰"：低沉的余响
+  if (crackle) { // 噼啪：许多细小的爆点
+    for (let i = 0; i < 45; i++)
+      noise(t + rand(0.6, 2.4), 0.025, 'highpass', 2600, 2000, rand(0.015, 0.06), pan + rand(-0.25, 0.25), 0.001, 0.3);
+  }
+}
+function soundLaunch(x) {
+  if (!ac || !state.sound || ac.state !== 'running' || Math.random() < 0.3) return;
+  const pan = Math.max(-0.7, Math.min(0.7, (x / W) * 2 - 1));
+  const t = ac.currentTime + rand(0.05, 0.2);
+  noise(t, 0.12, 'lowpass', 300, 80, 0.1, pan, 0.002, 0.5);      // 发射筒的闷响
+  noise(t, 1.0, 'bandpass', 1200, 3000, 0.01, pan, 0.25, 0.2);  // 升空的细微嘶声
+}
+
+// ================= 粒子 =================
+const parts = [], rockets = [], glows = [];
+let frame = 0, flash = 0, flashColor = GOLD;
+
+class Part {
+  constructor(x, y, vx, vy, o) {
+    this.x = this.px = x; this.y = this.py = y; this.vx = vx; this.vy = vy;
+    this.h = o.h; this.s = o.s ?? 100;
+    this.life = this.max = o.life * rand(0.85, 1.15);
+    this.w = (o.w ?? 1.6) * S;
+    this.drag = o.drag ?? 0.955;
+    this.grav = (o.grav ?? 0.055) * S;
+    this.glitter = o.glitter; this.strobe = o.strobe; this.crackle = o.crackle;
+    this.split = o.split; this.pop = o.pop; this.flick = o.flick ?? true; this.hot = o.hot ?? true;
+    this.seed = Math.random() * 10 | 0;
+  }
+  update(dt) {
+    this.px = this.x; this.py = this.y;
+    const d = Math.pow(this.drag, dt);
+    this.vx *= d; this.vy = this.vy * d + this.grav * dt;
+    this.x += this.vx * dt; this.y += this.vy * dt;
+    this.life -= dt;
+    // 闪光尾屑
+    if (this.glitter && Math.random() < 0.25 * dt) {
+      add(this.x, this.y, rand(-.3, .3), rand(0, .4),
+        { h: 42, s: 70, life: rand(18, 30), w: 0.9, drag: 0.9, grav: 0.02, hot: false });
+    }
+    // 十字花：中途分裂
+    if (this.split && this.life < this.max * 0.5) {
+      const b = Math.random() * Math.PI, sp = rand(2.2, 3) * S;
+      for (let k = 0; k < 4; k++) {
+        const a = b + k * Math.PI / 2;
+        add(this.x, this.y, Math.cos(a) * sp, Math.sin(a) * sp, { h: this.h, s: this.s, life: 45, w: 1.4 });
+      }
+      return true;
+    }
+    // 爱心：定型一会儿后，每颗星再炸成几粒小火花散开下落
+    if (this.pop && this.life < this.max * 0.42) {
+      const n = Math.random() < 0.5 ? 5 : 4;
+      for (let k = 0; k < n; k++) {
+        const a = Math.random() * 6.28, sp = rand(1, 3) * S;
+        add(this.x, this.y, Math.cos(a) * sp, Math.sin(a) * sp - 0.4 * S,
+          { h: k % 2 ? this.h : 42, s: k % 2 ? this.s : 80, life: rand(60, 95), w: 1.4,
+            drag: 0.955, grav: 0.04, glitter: k === 0, crackle: k === 1 && Math.random() < 0.5 });
+      }
+      return true;
+    }
+    if (this.life <= 0) {
+      if (this.crackle) {
+        for (let k = 0; k < 4; k++) {
+          const a = Math.random() * 6.28, sp = rand(.6, 1.8) * S;
+          add(this.x, this.y, Math.cos(a) * sp, Math.sin(a) * sp,
+            { h: 50, s: 20, life: rand(5, 10), w: 1.2, grav: 0, hot: false });
+        }
+      }
+      return true;
+    }
+    return false;
+  }
+  draw() {
+    const t = this.life / this.max; // 1 → 0
+    if (this.strobe && t < 0.8 && ((frame | 0) + this.seed) % 6 < 3) return;
+    let a = t < 0.25 ? t / 0.25 : 1;
+    if (this.flick && t < 0.45) a *= 0.4 + Math.random() * 0.6;
+    // 刚炸开时接近白色，随后显出本色，最后变暗
+    const L = this.hot && t > 0.88 ? 92 : 50 + 22 * t;
+    ctx.strokeStyle = `hsla(${this.h},${this.s}%,${L}%,${a})`;
+    ctx.lineWidth = this.w * (0.5 + 0.5 * t);
+    ctx.beginPath();
+    ctx.moveTo(this.px, this.py);
+    ctx.lineTo(this.x, this.y);
+    ctx.stroke();
+  }
+}
+function add(x, y, vx, vy, o) {
+  if (parts.length < MAX) parts.push(new Part(x, y, vx, vy, o));
+}
+function sphere() { // 球面方向投影到屏幕：中心更密，有立体感
+  const u = Math.random() * 2 - 1, t = Math.random() * 6.28, r = Math.sqrt(1 - u * u);
+  return [r * Math.cos(t), r * Math.sin(t)];
+}
+function burst(x, y, n, sp, o, jitter = 0.06) {
+  for (let i = 0; i < n; i++) {
+    const [dx, dy] = sphere(), v = sp * rand(1 - jitter, 1 + jitter);
+    add(x, y, dx * v, dy * v, typeof o === 'function' ? o(i) : o);
+  }
+}
+const N = n => Math.round(n * (isMobile ? 0.65 : 1));
+
+// ================= 花型 =================
+const SHELLS = {
+  peony: { name: '牡丹', fn(x, y, sp, c) {
+    burst(x, y, N(320), sp, { ...c, life: 80, w: 1.8 });
+    if (Math.random() < 0.5) burst(x, y, N(90), sp * 0.45, { ...pick(COLORS), life: 70, w: 1.6 });
+  } },
+  chrys: { name: '菊花', fn(x, y, sp, c) {
+    burst(x, y, N(260), sp, { ...c, life: 105, w: 1.4, glitter: true, drag: 0.958 });
+  } },
+  willow: { name: '金柳', fn(x, y, sp) {
+    burst(x, y, N(220), sp * 0.85, { ...GOLD, life: 230, w: 1.2, drag: 0.945, grav: 0.03, glitter: true, flick: false }, 0.15);
+  } },
+  multi: { name: '七彩', fn(x, y, sp) {
+    const cs = [pick(COLORS), pick(COLORS), pick(COLORS)];
+    burst(x, y, N(360), sp, () => ({ ...pick(cs), life: 90, w: 1.6 }), 0.1);
+  } },
+  ring: { name: '圆环', fn(x, y, sp, c) {
+    const tilt = rand(0.3, 1.25), rot = rand(0, Math.PI), n = N(60);
+    for (let i = 0; i < n; i++) {
+      const t = (i + rand(-0.3, 0.3)) / n * 6.28, dx = Math.cos(t), dy = Math.sin(t) * Math.cos(tilt);
+      const v = sp * rand(0.93, 1.07);
+      add(x, y, (dx * Math.cos(rot) - dy * Math.sin(rot)) * v, (dx * Math.sin(rot) + dy * Math.cos(rot)) * v,
+        { ...c, life: 85, w: 2.4 });
+    }
+    burst(x, y, N(80), sp * 0.35, { ...pick(COLORS), life: 70, w: 1.6 });
+  } },
+  // 真实的图案弹：星点数量少、颗粒大，很快停在形状上，然后整体缓缓下沉；
+  // 而且炸开时角度随机，看到的往往是歪的、扁的
+  heart: { name: '爱心', fn(x, y, sp) {
+    const n = N(70);
+    const c = Math.random() < 0.6 ? { h: 350, s: 95 } : pick(COLORS);
+    const rot = rand(-0.4, 0.4), squash = rand(0.6, 1);
+    for (let i = 0; i < n; i++) {
+      const t = i / n * 6.28;
+      const hx = 16 * Math.sin(t) ** 3 * squash;
+      const hy = -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)) - 2;
+      const rx = hx * Math.cos(rot) - hy * Math.sin(rot), ry = hx * Math.sin(rot) + hy * Math.cos(rot);
+      const v = sp * 1.25 / 16 * rand(0.96, 1.04);
+      add(x, y, rx * v, ry * v, { ...c, life: 115, w: 2.8, drag: 0.9, grav: 0.012, glitter: i % 2 === 0, pop: true });
+    }
+  } },
+  crossette: { name: '十字花', fn(x, y, sp, c) {
+    const n = N(48);
+    for (let i = 0; i < n; i++) {
+      const a = i / n * 6.28, v = sp * rand(0.85, 1);
+      add(x, y, Math.cos(a) * v, Math.sin(a) * v, { ...c, life: 60, w: 2.2, split: true, flick: false });
+    }
+  } },
+  strobe: { name: '银光闪烁', fn(x, y, sp) {
+    burst(x, y, N(260), sp, { h: 210, s: 10, life: 150, w: 1.8, strobe: true, drag: 0.95, grav: 0.03, flick: false }, 0.2);
+  } },
+  palm: { name: '棕榈', fn(x, y, sp, c) {
+    const arms = Math.floor(rand(8, 12));
+    for (let k = 0; k < arms; k++) {
+      const a = k / arms * 6.28 + rand(-.1, .1);
+      for (let i = 0; i < N(26); i++) {
+        const v = sp * rand(0.35, 1.05);
+        add(x, y, Math.cos(a) * v + rand(-.15, .15), Math.sin(a) * v + rand(-.15, .15),
+          { ...(i % 4 ? GOLD : c), life: 130, w: 2, drag: 0.955, grav: 0.04, glitter: i % 5 === 0 });
+      }
+    }
+  } },
+  crackle: { name: '噼啪金花', fn(x, y, sp) {
+    burst(x, y, N(240), sp * 0.9, { h: 45, s: 75, life: 65, w: 1.5, crackle: true }, 0.25);
+  } },
+  double: { name: '双层', fn(x, y, sp, c) {
+    burst(x, y, N(240), sp, { ...c, life: 88, w: 1.7 });
+    burst(x, y, N(160), sp * 0.55, { ...pick(COLORS), life: 88, w: 1.7 });
+  } },
+};
+const TYPE_KEYS = Object.keys(SHELLS);
+
+function explode(x, y, type, size) {
+  const key = type === 'random' || !type ? pick(TYPE_KEYS) : type;
+  const c = pick(COLORS);
+  const sp = 9.5 * S * size;
+  SHELLS[key].fn(x, y, sp, c);
+  // 中心白闪
+  burst(x, y, N(30), 1.5 * S, { h: 45, s: 30, life: 14, w: 3, grav: 0, hot: true }, 1);
+  glows.push({ x, y, r: 110 * S * size, c: key === 'willow' || key === 'crackle' ? GOLD : c, life: 14 });
+  flash = Math.min(0.3, flash + 0.1 * size); flashColor = c;
+  soundBoom(x, size, key === 'crackle' || key === 'strobe' || key === 'willow');
+}
+
+// ================= 火箭 =================
+class Rocket {
+  constructor(tx, ty, type, size) {
+    // 从楼群后面升起
+    this.x = tx + rand(-W * 0.05, W * 0.05); this.y = cur.geo.fadeB;
+    this.tx = tx; this.ty = ty; this.type = type; this.size = size;
+    this.t = 0; this.T = rand(50, 68);
+    this.sx = this.x; this.sy = this.y;
+    this.px = this.x; this.py = this.y;
+    soundLaunch(this.x);
+  }
+  update(dt) {
+    this.px = this.x; this.py = this.y;
+    this.t += dt;
+    const k = Math.min(1, this.t / this.T), e = 1 - (1 - k) * (1 - k); // 越飞越慢
+    this.x = this.sx + (this.tx - this.sx) * e + Math.sin(this.t * 0.6) * 0.6;
+    this.y = this.sy + (this.ty - this.sy) * e;
+    if (Math.random() < 0.8 * dt) {
+      add(this.x, this.y, rand(-.4, .4), rand(.3, 1.2), { ...GOLD, s: 80, life: rand(14, 26), w: 1, grav: 0.03, hot: false });
+    }
+    return k >= 1;
+  }
+  draw() {
+    ctx.strokeStyle = 'rgba(255,225,170,0.9)';
+    ctx.lineWidth = 2 * S;
+    ctx.beginPath(); ctx.moveTo(this.px, this.py); ctx.lineTo(this.x, this.y); ctx.stroke();
+  }
+}
+// 炸开高度限制在照片的天空范围内
+function skyY() { const g = cur.geo; return rand(g.top, Math.max(g.top + 10, g.floor)); }
+function launch(tx, ty, type, size) {
+  rockets.push(new Rocket(
+    tx ?? rand(W * 0.08, W * 0.92),
+    ty ?? skyY(),
+    type ?? state.type,
+    size ?? rand(0.75, 1.1),
+  ));
+}
+function salvo() {
+  const type = state.type === 'random' ? pick(TYPE_KEYS) : state.type;
+  const n = isMobile ? 5 : 9;
+  for (let i = 0; i < n; i++) {
+    setTimeout(() => {
+      const g = cur.geo;
+      launch(W * (i + 0.5) / n, g.top + (g.floor - g.top) * rand(0.2, 0.5), type, rand(0.75, 0.95));
+    }, i * 90);
+  }
+}
+
+// ================= 主循环 =================
+let last = performance.now(), timer = 0;
+function loop(now) {
+  const dt = Math.min((now - last) / 16.667, 3);
+  last = now; frame += dt;
+
+  // 场景渐变与自动轮换
+  if (trans < 1) { trans = Math.min(1, trans + dt / 100); drawBg(); }
+  if (state.scene === 'auto' && now - sceneAt > 40000) switchScene(nextSceneKey());
+
+  // 长曝光拖影：烟花层逐渐变透明
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.fillStyle = `rgba(0,0,0,${1 - Math.pow(1 - 0.17, dt)})`;
+  ctx.fillRect(0, 0, W, H);
+
+  // 爆炸照亮夜空和建筑
+  if (flash > 0.01) {
+    flashEl.style.background = `hsl(${flashColor.h},${flashColor.s * 0.6}%,45%)`;
+    flashEl.style.opacity = (flash * 0.3).toFixed(3);
+    flash *= Math.pow(0.86, dt);
+  } else flashEl.style.opacity = 0;
+
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.lineCap = 'round';
+
+  // 自动发射
+  timer -= dt * 16.667;
+  if (timer <= 0 && state.mode !== 'manual') {
+    if (state.mode === 'grand') {
+      const n = Math.random() < 0.3 ? 3 : 2;
+      for (let i = 0; i < n; i++) launch(undefined, undefined, undefined, rand(0.85, 1.2));
+      if (Math.random() < 0.06) salvo();
+      timer = rand(250, 500);
+    } else {
+      launch(); if (Math.random() < 0.35) launch();
+      timer = rand(700, 1400);
+    }
+  }
+
+  // 爆炸瞬间的光团
+  for (let i = glows.length - 1; i >= 0; i--) {
+    const g = glows[i], a = g.life / 14;
+    const gr = ctx.createRadialGradient(g.x, g.y, 0, g.x, g.y, g.r);
+    gr.addColorStop(0, `hsla(${g.c.h},${g.c.s}%,75%,${0.12 * a * a})`);
+    gr.addColorStop(1, `hsla(${g.c.h},${g.c.s}%,50%,0)`);
+    ctx.fillStyle = gr;
+    ctx.fillRect(g.x - g.r, g.y - g.r, g.r * 2, g.r * 2);
+    if ((g.life -= dt) <= 0) glows.splice(i, 1);
+  }
+
+  for (let i = rockets.length - 1; i >= 0; i--) {
+    const r = rockets[i];
+    if (r.update(dt)) { explode(r.x, r.y, r.type, r.size); rockets.splice(i, 1); }
+    else r.draw();
+  }
+  let j = 0;
+  for (let i = 0; i < parts.length; i++) {
+    const p = parts[i];
+    if (!p.update(dt)) { p.draw(); parts[j++] = p; }
+  }
+  parts.length = j;
+
+  drawFg();
+  requestAnimationFrame(loop);
+}
+
+// ================= 交互 =================
+const hint = document.getElementById('hint');
+cvs.addEventListener('pointerdown', e => {
+  initAudio();
+  hint.style.opacity = 0;
+  launch(e.clientX, Math.min(e.clientY, cur.geo.floor), state.type, rand(0.85, 1.1));
+});
+
+const typesEl = document.getElementById('types');
+[['random', '随机'], ...TYPE_KEYS.map(k => [k, SHELLS[k].name])].forEach(([k, name]) => {
+  const b = document.createElement('button');
+  b.textContent = name; b.dataset.k = k;
+  if (k === state.type) b.className = 'on';
+  b.onclick = () => {
+    state.type = k;
+    typesEl.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+    initAudio();
+    launch(undefined, undefined, k, 1);
+  };
+  typesEl.appendChild(b);
+});
+const sceneSel = document.getElementById('scene');
+sceneSel.innerHTML = '<option value="auto">自动轮换（每 40 秒）</option>' +
+  sceneOrder.map(k => `<option value="${k}">${SCENES[k].name}</option>`).join('');
+sceneSel.onchange = e => {
+  state.scene = e.target.value;
+  if (state.scene !== 'auto') switchScene(state.scene);
+  else sceneAt = performance.now();
+};
+document.getElementById('mode').onchange = e => { state.mode = e.target.value; timer = 0; initAudio(); };
+document.getElementById('salvo').onclick = () => { initAudio(); salvo(); };
+document.getElementById('optText').onchange = e => state.text = e.target.checked;
+document.getElementById('optSound').onchange = e => { state.sound = e.target.checked; initAudio(); };
+document.getElementById('optCount').onchange = e => { state.count = e.target.checked; document.getElementById('count').style.display = e.target.checked ? '' : 'none'; };
+const panel = document.getElementById('panel'), openBtn = document.getElementById('open');
+function setPanel(show) { panel.classList.toggle('hide', !show); openBtn.style.display = show ? 'none' : 'block'; }
+document.getElementById('close').onclick = () => setPanel(false);
+openBtn.onclick = () => setPanel(true);
+if (isMobile) setPanel(false);
+
+// ================= 背景音乐 =================
+// 默认播放同目录下的 music.mp3；也可以在控制台里选本地任意音乐文件
+const bgm = document.getElementById('bgm');
+const musicName = document.getElementById('musicName');
+const optMusic = document.getElementById('optMusic');
+let musicOK = true;
+bgm.volume = 0.6;
+bgm.addEventListener('error', () => {
+  musicOK = false;
+  musicName.textContent = '没找到 music.mp3，可以点上面的按钮选一首';
+});
+function playMusic() {
+  if (state.music && musicOK && bgm.paused) bgm.play().catch(() => {});
+}
+state.music = true;
+optMusic.onchange = e => {
+  state.music = e.target.checked;
+  if (state.music) playMusic(); else bgm.pause();
+};
+const musicFile = document.getElementById('musicFile');
+document.getElementById('pickMusic').onclick = () => musicFile.click();
+musicFile.onchange = () => {
+  const f = musicFile.files[0];
+  if (!f) return;
+  bgm.src = URL.createObjectURL(f);
+  musicOK = true; state.music = true; optMusic.checked = true;
+  musicName.textContent = '♪ ' + f.name.replace(/\.[^.]+$/, '');
+  bgm.play().catch(() => {});
+};
+
+// ================= 祝福语 =================
+const blessEl = document.getElementById('bless');
+const WORDS = ['新年快乐', '万事如意', '心想事成', '财源广进', '阖家幸福', '岁岁平安', '前程似锦', '平安喜乐'];
+let wi = 0;
+function showBless(text) {
+  blessEl.classList.remove('show');
+  void blessEl.offsetWidth; // 重启动画
+  blessEl.textContent = text;
+  blessEl.style.top = rand(22, 32) + '%';
+  blessEl.classList.add('show');
+}
+setInterval(() => {
+  if (!state.text) return;
+  showBless(wi === 0 ? `${nextYear()} 新年快乐` : WORDS[wi % WORDS.length]);
+  wi++;
+}, 6500);
+
+// ================= 倒计时 =================
+const countEl = document.getElementById('count'), bigEl = document.getElementById('big');
+function nextYear() { const n = new Date(); return n.getMonth() === 0 && n.getDate() === 1 ? n.getFullYear() : n.getFullYear() + 1; }
+let wasCounting = false;
+function tickCount() {
+  const now = new Date();
+  if (now.getMonth() === 0 && now.getDate() === 1) {
+    countEl.textContent = `🎉 ${now.getFullYear()} 新年快乐 🎉`;
+    bigEl.style.opacity = 0;
+    if (wasCounting) { // 刚好跨年：大结局
+      wasCounting = false;
+      for (let k = 0; k < 4; k++) setTimeout(salvo, k * 900);
+      showBless(`${now.getFullYear()} 新年快乐`);
+    }
+    return;
+  }
+  const target = new Date(now.getFullYear() + 1, 0, 1);
+  const diff = (target - now) / 1000;
+  const d = Math.floor(diff / 86400), h = Math.floor(diff % 86400 / 3600),
+        m = Math.floor(diff % 3600 / 60), s = Math.floor(diff % 60);
+  const pad = v => String(v).padStart(2, '0');
+  countEl.textContent = `距离 ${target.getFullYear()} 年还有 ${d} 天 ${pad(h)}:${pad(m)}:${pad(s)}`;
+  if (diff <= 10) { wasCounting = true; bigEl.textContent = Math.ceil(diff); bigEl.style.opacity = 1; }
+  else bigEl.style.opacity = 0;
+}
+setInterval(tickCount, 250); tickCount();
+
+// ================= 启动 =================
+addEventListener('resize', resize);
+resize();
+setCredit();
+for (let i = 0; i < 5; i++) setTimeout(() => launch(), i * 220);
+setTimeout(() => state.text && showBless(`${nextYear()} 新年快乐`), 1800);
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

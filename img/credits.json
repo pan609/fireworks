@@ -1,0 +1,50 @@
+{
+ "fuji": {
+  "file": "Mount Fuji at night.jpg",
+  "artist": "muroi8210",
+  "license": "CC BY-SA 2.0",
+  "thumb": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/12/Mount_Fuji_at_night.jpg/1920px-Mount_Fuji_at_night.jpg",
+  "page": "https://commons.wikimedia.org/wiki/File:Mount_Fuji_at_night.jpg",
+  "size": 500298
+ },
+ "shanghai": {
+  "file": "Lujiazui skyline by night from Bund, fully illuminated.jpg",
+  "artist": "Daniel Case",
+  "license": "CC BY-SA 3.0",
+  "thumb": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5f/Lujiazui_skyline_by_night_from_Bund%2C_fully_illuminated.jpg/1920px-Lujiazui_skyline_by_night_from_Bund%2C_fully_illuminated.jpg",
+  "page": "https://commons.wikimedia.org/wiki/File:Lujiazui_skyline_by_night_from_Bund,_fully_illuminated.jpg",
+  "size": 633505
+ },
+ "canton": {
+  "file": "Canton Tower at night 1.jpg",
+  "artist": "钉钉",
+  "license": "CC BY-SA 4.0",
+  "thumb": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ef/Canton_Tower_at_night_1.jpg/1920px-Canton_Tower_at_night_1.jpg",
+  "page": "https://commons.wikimedia.org/wiki/File:Canton_Tower_at_night_1.jpg",
+  "size": 546392
+ },
+ "paris": {
+  "file": "Pont des Invalides et Tour Eiffel - 01.jpg",
+  "artist": "Carlos Delgado",
+  "license": "CC BY-SA 3.0",
+  "thumb": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/cc/Pont_des_Invalides_et_Tour_Eiffel_-_01.jpg/1920px-Pont_des_Invalides_et_Tour_Eiffel_-_01.jpg",
+  "page": "https://commons.wikimedia.org/wiki/File:Pont_des_Invalides_et_Tour_Eiffel_-_01.jpg",
+  "size": 351852
+ },
+ "sydney": {
+  "file": "Sydney Opera House at Night, 2025.jpg",
+  "artist": "JustARandomEditor123",
+  "license": "CC BY-SA 4.0",
+  "thumb": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0d/Sydney_Opera_House_at_Night%2C_2025.jpg/1920px-Sydney_Opera_House_at_Night%2C_2025.jpg",
+  "page": "https://commons.wikimedia.org/wiki/File:Sydney_Opera_House_at_Night,_2025.jpg",
+  "size": 509360
+ },
+ "london": {
+  "file": "Palace of Westminster ^ Elizabeth Tower with Big Ben - panoramio.jpg",
+  "artist": "Juri Kowski",
+  "license": "CC BY-SA 3.0",
+  "thumb": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a8/Palace_of_Westminster_%5E_Elizabeth_Tower_with_Big_Ben_-_panoramio.jpg/1920px-Palace_of_Westminster_%5E_Elizabeth_Tower_with_Big_Ben_-_panoramio.jpg",
+  "page": "https://commons.wikimedia.org/wiki/File:Palace_of_Westminster_%5E_Elizabeth_Tower_with_Big_Ben_-_panoramio.jpg",
+  "size": 315356
+ }
+}

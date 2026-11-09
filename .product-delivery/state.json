@@ -1,0 +1,10 @@
+{
+  "project": "fireworks",
+  "summary": "跨年烟花 HTML 页面：11 种花型、合成音效、祝福语、倒计时、6 个地标实拍夜景背景（含水面倒影）",
+  "status": "已上线 GitHub Pages",
+  "updated": "2026-11-09",
+  "notes": [
+    "music.mp3 有版权，只放本机，.gitignore 已排除",
+    "背景照片来自 Wikimedia Commons（CC BY-SA），署名在页面右下角和 README"
+  ]
+}
